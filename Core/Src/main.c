@@ -7,6 +7,7 @@
 /* Private includes ----------------------------------------------------------*/
 #include "HD44780.h"
 #include "myDelay.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -16,8 +17,8 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 // Avg_Slope 4.0 	4.3 	4.6 mV/°C
 // V25  		1.34 	1.43 	1.52 V
-float Temperature = 0.0;
-float Pomiar = 0.0;
+// float Temperature = 0.0;
+// float Pomiar = 0.0;
 
 const float kp = 1.5;
 const float ki = 0.06;
@@ -26,68 +27,42 @@ const float kd = 0.9;
 const float Heating_A_coefficient = 0.1476835343;
 const float Heating_B_coefficient = 19.7004294;
 
-volatile uint8_t PID_Enable = 0;
+volatile bool TriggerPid = false;
 
-volatile int32_t Error = 0;
-volatile int32_t Last_Error = 0;
 volatile int16_t PWM = 0;
-
-volatile int32_t Integral = 0;
-volatile int32_t Derivative = 0;
 
 volatile int16_t Current_Temperature = 0;
 volatile int16_t Target_Temperature = 0;
 
-volatile uint8_t UpgradeDisplay = 0;
-
-enum State
+void DisplayTargetTemperature(uint16_t PWM)
 {
-    Heating = 0,
-    Ready = 1
-} State;
-
-void Set_Target_Temperature(uint16_t PWM)
-{
-    char tab[4];
+    char tab[4] = {0x20, 0x20, 0x20, 0x20};
     if (PWM >= 100) {
         itoa(PWM, tab, 10);
         lcd_str_XY(2, 0, tab);
     } else if (PWM >= 10 && PWM < 100) {
-        tab[0] = ' ';
         itoa(PWM, tab + 1, 10);
         lcd_str_XY(2, 0, tab);
     } else {
-        tab[0] = ' ';
-        tab[1] = ' ';
         itoa(PWM, tab + 2, 10);
         lcd_str_XY(2, 0, tab);
     }
 }
-
-void SetDisplayCurrentTemperature()
+void DisplayCurrentTemperature()
 {
-    /*
-     * TO DO:
-     */
-    // tab[5] -> tab[4]
-    char tab[5];
+    char tab[4] = {0x20, 0x20, 0x20, 0x20};
     float Heater_V = 0.0;
-    float VtoTemp = 0.0;
+    float U2Temp = 0.0;
 
     Heater_V = 660 * aADCxConvertedData[0] / 819;
-    // snprintf(tab, sizeof tab, "%04d", aADCxConvertedData[0]);
-    //	itoa(aADCxConvertedData[0],tab,10);
-    // lcd_str_XY(2,1,tab);
-
 
     // wzmacniacz nieodwracajacy
     // Uin=(ADC*R1)/(R1+R2); // wzmacniacz operacyjny
     // R1=(Uq*R)/(Ui-Uq); //dzielnik napiecia
     // Current_Temperature=Heating_A_coefficient*R1+Heating_B_coefficient;
 
-    VtoTemp = Heating_A_coefficient * Heater_V + Heating_B_coefficient;
-    Current_Temperature = (uint16_t)VtoTemp;
-
+    U2Temp = Heating_A_coefficient * Heater_V + Heating_B_coefficient;
+    Current_Temperature = (uint16_t)U2Temp;
 
     itoa(Current_Temperature, tab, 10);
     if (Current_Temperature < 100) {
@@ -96,10 +71,10 @@ void SetDisplayCurrentTemperature()
     } else
         lcd_str_XY(2, 1, tab);
 }
-void SetDsiplayCurrentPWM(uint16_t valuePWM)
+void DsiplayCurrentPWM(uint16_t valuePWM)
 {
     uint8_t Result = 0;
-    char tab[4];
+    char tab[4] = {0x20, 0x20, 0x20, 0x20};
 
     Result = 0.2 * valuePWM;
 
@@ -118,58 +93,39 @@ void SetDsiplayCurrentPWM(uint16_t valuePWM)
         lcd_str_XY(14, 1, tab);
     }
 }
-
-void PID(void)
+void PID(int32_t *Last_Error, int32_t *Integral, int32_t *Derivative)
 {
+    int32_t Error = 0;
     if (Target_Temperature != 0) {
         Error = Target_Temperature - Current_Temperature;
+        Integral += Error;
+        *Derivative = Error - *Last_Error;
 
-        Integral = Integral + Error;
-        if (Integral > 500)
-            Integral = 500;
-        if (Integral < 0)
-            Integral = 0;
+        if (*Integral > 500)
+            *Integral = 500;
+        if (*Integral < 0)
+            *Integral = 0;
 
-        Derivative = Error - Last_Error;
     } else {
         Error = 0;
-        Integral = 0;
-        Derivative = 0;
+        *Integral = 0;
+        *Derivative = 0;
     }
+    *Last_Error = Error;
 
-
-    PWM = (int16_t)(kp * Error) + (ki * Integral) + (kd * Derivative);
-
-    if (PWM > 500)
+    PWM = (int16_t)(kp * Error) + (ki * *Integral) + (kd * *Derivative);
+    if (PWM > 500) {
         PWM = 500;
-    if (PWM < 0)
+    }
+    if (PWM < 0) {
         PWM = 0;
-    if (Current_Temperature >= 495)
+    }
+    if (Current_Temperature >= 495) {
         PWM = 0;
+    }
 
     LL_TIM_OC_SetCompareCH1(TIM2, PWM);
-
-    SetDsiplayCurrentPWM(PWM);
-
-    /*if(((Current_Temperature - Target_Temperature) < DeltaTempDisplay) && ((Current_Temperature -
-    Target_Temperature) > -DeltaTempDisplay))
-    {//Ready
-        if(State!=Ready)
-        {
-            lcd_str_XY(9,0,"  READY");
-            State=Ready;
-        }
-    }
-    else
-    {//Heating
-        if(State!=Heating)
-        {
-            lcd_str_XY(9,0,"HEATING");
-            State=Heating;
-        }
-    }*/
-
-    Last_Error = Error;
+    DsiplayCurrentPWM(PWM);
 }
 
 int main(void)
@@ -212,16 +168,15 @@ int main(void)
     volatile uint32_t CounterTIM = 0;
     volatile uint32_t OLDCounterTIM = 0;
 
+    int32_t Last_Error = 0;
+    int32_t Integral = 0;
+    int32_t Derivative = 0;
+
     while (1) {
-        /*LL_GPIO_SetOutputPin(LED_GPIO_Port, LED_Pin);
-        Delay(1000);
-        LL_GPIO_ResetOutputPin(LED_GPIO_Port, LED_Pin);
-        Delay(1000);*/
+
         if ((LL_GPIO_IsInputPinSet(ENCODER_SW_GPIO_Port, ENCODER_SW_Pin)) == 1) {
-            // LL_GPIO_ResetOutputPin(LED_GPIO_Port,LED_Pin);
             LL_GPIO_ResetOutputPin(Buzzer_GPIO_Port, Buzzer_Pin);
         } else {
-            // LL_GPIO_SetOutputPin(LED_GPIO_Port,LED_Pin);
             LL_GPIO_SetOutputPin(Buzzer_GPIO_Port, Buzzer_Pin);
         }
         CounterTIM = LL_TIM_GetCounter(TIM1);
@@ -240,24 +195,14 @@ int main(void)
             }
 
             Target_Temperature = CounterTIM;
-
-            Set_Target_Temperature(CounterTIM);
-
-            /*LL_GPIO_SetOutputPin(Buzzer_GPIO_Port,Buzzer_Pin);
-            Delay(2);
-            LL_GPIO_ResetOutputPin(Buzzer_GPIO_Port,Buzzer_Pin);*/
+            DisplayTargetTemperature(CounterTIM);
         }
 
-        if (UpgradeDisplay == 1) {
-            UpgradeDisplay = 0;
-            SetDisplayCurrentTemperature();
+        if (TriggerPid == true) {
+            PID(&Last_Error, &Integral, &Derivative);
+            DisplayCurrentTemperature();
+            TriggerPid = false;
         }
-
-        if (PID_Enable == 1) {
-            PID();
-            PID_Enable = 0;
-        }
-
 
         // aADCxConvertedData[2]=123;
         // aADCxConvertedData[3]=0;

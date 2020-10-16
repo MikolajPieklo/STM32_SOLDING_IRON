@@ -79,8 +79,7 @@ void ADC1_Init()
     // transfer */ LL_ADC_SetMultiTwoSamplingDelay  (__LL_ADC_COMMON_INSTANCE(ADC1),
     // LL_ADC_MULTI_TWOSMP_DELAY_1CYCLE); /* Set ADC multimode: delay between 2 sampling phases */
 
-    // LL_ADC_SetResolution			(ADC1, LL_ADC_DATA_ALIGN_RIGHT); 			/* Set ADC conversion
-    // data alignment */
+    // LL_ADC_SetResolution(ADC1, LL_ADC_DATA_ALIGN_RIGHT); /* Set ADC conversion data alignment */
     LL_ADC_SetSequencersScanMode(
         ADC1, LL_ADC_SEQ_SCAN_ENABLE); /* Set ADC sequencers scan mode, for all ADC groups*/
     LL_ADC_REG_SetTriggerSource(
