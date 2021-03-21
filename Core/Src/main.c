@@ -9,6 +9,7 @@
 #include "myDelay.h"
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -16,28 +17,24 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 // Avg_Slope 4.0 	4.3 	4.6 mV/°C
 // V25  		1.34 	1.43 	1.52 V
-// float Temperature = 0.0;
-// float Pomiar = 0.0;
-const float Kp = 1.5;
-const float Ki = 0.06;
-const float Kd = 0.9;
+const float Kp = 1.8;
+const float Ki = 0.9;
+const float Kd = 0.1;
 
 const float HeatingCoefficientA = 0.1476835343;
 const float HeatingCoefficientB = 19.7004294;
 
 volatile bool TriggerPid = false;
-volatile int16_t PWM = 0;
-volatile int16_t CurrentTemperature = 0;
-volatile int16_t TargetTemperature = 0;
 
 void DisplayTargetTemperature(uint16_t pwm)
 {
-   char tab[4] =
-      { 0x20, 0x20, 0x20, 0x20 };
+   char* tab = (char*) malloc (sizeof(char*) * 4);
    sprintf (tab, "%3d", pwm);
    lcd_str_XY (2, 0, tab);
+   free (tab);
+
 }
-void DisplayCurrentTemperature()
+void DisplayCurrentTemperature(uint16_t* currentTemperature)
 {
    if (aADCxConvertedData[0] == 4095)
    {
@@ -56,37 +53,36 @@ void DisplayCurrentTemperature()
    // Current_Temperature=Heating_A_coefficient*R1+Heating_B_coefficient;
 
    float voltage2Temp = HeatingCoefficientA * heaterInV + HeatingCoefficientB;
-   CurrentTemperature = (uint16_t) voltage2Temp;
+   *currentTemperature = (uint16_t) voltage2Temp;
 
-   char tab[4] =
-      { 0x20, 0x20, 0x20, 0x20 };
-   sprintf (tab, "%3d", CurrentTemperature);
+   char* tab = (char*) malloc (sizeof(char*) * 4);
+   sprintf (tab, "%3d", *currentTemperature);
    lcd_str_XY (2, 1, tab);
+   free (tab);
 }
 void DsiplayCurrentPWM(uint16_t valuePWM)
 {
    uint8_t result = 0;
-   char tab[4] =
-      { 0x20, 0x20, 0x20, 0x20 };
    result = (uint8_t) (0.2 * valuePWM);
-
+   char* tab = (char*) malloc (sizeof(char*) * 4);
    sprintf (tab, "%3d", result);
    lcd_str_XY (12, 1, tab);
+   free (tab);
 }
-void PID(int32_t* lastError, int32_t* integral, int32_t* derivative)
+void PID(int16_t* pwm, uint16_t* targetTemperature, uint16_t* currentTemperature, int32_t* lastError, int32_t* integral,
+         int32_t* derivative)
 {
    int32_t error = 0;
-   if (TargetTemperature != 0)
+   if (*targetTemperature != 0)
    {
-      error = TargetTemperature - CurrentTemperature;
+      error = *targetTemperature - *currentTemperature;
       *integral += error;
       *derivative = error - *lastError;
 
       if (*integral > 500)
          *integral = 500;
-      if (*integral < 0)
-         *integral = 0;
-
+      if (*integral < -500)
+         *integral = 500;
    }
    else
    {
@@ -96,22 +92,22 @@ void PID(int32_t* lastError, int32_t* integral, int32_t* derivative)
    }
    *lastError = error;
 
-   PWM = (int16_t) (Kp * error) + (Ki * *integral) + (Kd * *derivative);
-   if (PWM > 500)
+   *pwm = (int16_t) (Kp * error) + (Ki * *integral) + (Kd * *derivative);
+   if (*pwm > 500)
    {
-      PWM = 500;
+      *pwm = 500;
    }
-   if (PWM < 0)
+   if (*pwm < 0)
    {
-      PWM = 0;
+      *pwm = 0;
    }
-   if (CurrentTemperature >= 495)
+   if (*currentTemperature >= 495)
    {
-      PWM = 0;
+      *pwm = 0;
    }
 
-   LL_TIM_OC_SetCompareCH1 (TIM2, PWM);
-   DsiplayCurrentPWM (PWM);
+   LL_TIM_OC_SetCompareCH1 (TIM2, *pwm);
+   DsiplayCurrentPWM (*pwm);
 }
 
 int main(void)
@@ -138,6 +134,13 @@ int main(void)
    LL_TIM_EnableCounter (TIM1);
    LL_TIM_EnableCounter (TIM3);
 
+   uint16_t currentTemperature = 0;
+   uint16_t targetTemperature = 0;
+   int16_t pwm = 0;
+
+   uint32_t counterTim = 0;
+   uint32_t oldCounterTim = 0;
+
    LCD_Init ();
    lcd_str_XY (0, 0, "T 000");/* Target temperature. */
    lcd_char_XY (1, 0, 0x01);
@@ -150,9 +153,6 @@ int main(void)
    lcd_char_XY (6, 1, 'C');
    lcd_char_XY (10, 1, 0x00);
    lcd_str_XY (14, 1, "0%");
-
-   volatile uint32_t counterTim = 0;
-   volatile uint32_t oldCounterTim = 0;
 
    int32_t lastError = 0;
    int32_t integral = 0;
@@ -189,14 +189,14 @@ int main(void)
             counterTim = 10 * counterTim;
          }
 
-         TargetTemperature = counterTim;
+         targetTemperature = counterTim;
          DisplayTargetTemperature (counterTim);
       }
 
       if (TriggerPid == true)
       {
-         PID (&lastError, &integral, &derivative);
-         DisplayCurrentTemperature ();
+         DisplayCurrentTemperature (&currentTemperature);
+         PID (&pwm, &targetTemperature, &currentTemperature, &lastError, &integral, &derivative);
          TriggerPid = false;
       }
 
