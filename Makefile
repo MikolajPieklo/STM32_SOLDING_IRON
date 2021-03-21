@@ -1,23 +1,36 @@
-#Author: M Pieklo
-#Date: 03.10.2020
-#Project: Soldering iron based on STM32.
-#License: Opensource
+# Author: M Pieklo
+# Date: 14.12.2020
+# Project: Soldering iron based on STM32.
+# License: Opensource
+
+NAME=build/TARGET
 
 CC=arm-none-eabi-gcc
 CC2HEX=arm-none-eabi-objcopy
 MACH=cortex-m3
 
-CFLAGS= -c -mcpu=$(MACH) -mthumb -std=gnu11 -O0 -DSTM32F103xB -specs=nano.specs -Wall
-#-MF"Core/Src/system_stm32f1xx.d" -MT"Core/Src/system_stm32f1xx.o" 
-DEBUGINFO= -DDEBUG -g3 -ffunction-sections -fdata-sections -fstack-usage -MMD -MP -mfloat-abi=soft 
+# Use newlib.
+USE_NOHOST=--specs=nosys.specs
+USE_NANO=--specs=nano.specs
+USE_SEMIHOST=--specs=rdimon.specs
+
+# Create map file
+MAP=-Wl,-Map=$(NAME).map
+
+# Link for code size
+GC=-Wl,--gc-sections
+
+CFLAGS= -c -mcpu=$(MACH) -mthumb -mfloat-abi=soft -std=gnu11 -O0 -DSTM32F103xB $(USE_NANO) -Wall \
+	-ffunction-sections -fdata-sections -fstack-usage -MMD 
+	
+DEBUGINFO= -DDEBUG -g3 
+
 CONST= -DUSE_FULL_LL_DRIVER -DHSE_VALUE=8000000 -DHSI_VALUE=8000000 -DLSE_VALUE=32768 -DLSI_VALUE=40000 
-#'-DHSE_STARTUP_TIMEOUT=100' '-DLSE_STARTUP_TIMEOUT=5000''-DVDD_VALUE=3300' '-DPREFETCH_ENABLE=1' 
 
-INCLUDES= -I Core/Inc/ -I Drivers/STM32F1xx_HAL_Driver/Inc/ -I Drivers/CMSIS/Device/ST/STM32F1xx/Include/ -I Drivers/CMSIS/Include/
+INCLUDES= -ICore/Inc/ -IDrivers/STM32F1xx_HAL_Driver/Inc/ -IDrivers/CMSIS/Device/ST/STM32F1xx/Include/ -IDrivers/CMSIS/Include/
 
-LDFLAGS= --specs=nosys.specs -Wl,-Map="build/test.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb\
- -Wl,--start-group -lc -lm -Wl,--end-group -T STM32F103C8TX_FLASH.ld
-#-nostdlib
+LDFLAGS= -mcpu=$(MACH) -mthumb -mfloat-abi=soft -T"STM32F103C8TX_FLASH.ld" \
+	$(MAP) $(GC) -static $(USE_NANO)  -Wl,--start-group -lc -lm -Wl,--end-group 
 
 all: build/target.elf build/target.hex
  
