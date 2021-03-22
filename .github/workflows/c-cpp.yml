@@ -13,6 +13,6 @@ jobs:
 
     steps:
     - name: Install compiler
-      run: apt install gcc-arm-none-eabi
+      run: sudo apt install gcc-arm-none-eabi
     - name: make
       run: make
