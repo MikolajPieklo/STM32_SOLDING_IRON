@@ -32,8 +32,11 @@ INCLUDES= -ICore/Inc/ -IDrivers/STM32F1xx_HAL_Driver/Inc/ -IDrivers/CMSIS/Device
 LDFLAGS= -mcpu=$(MACH) -mthumb -mfloat-abi=soft -T"STM32F103C8TX_FLASH.ld" \
 	$(MAP) $(GC) -static $(USE_NANO)  -Wl,--start-group -lc -lm -Wl,--end-group 
 
-all: build/target.elf build/target.hex
- 
+all: makebuild build/target.elf build/target.hex
+	
+makebuild:	
+	@if [ ! -e build ]; then mkdir build; fi
+
 build/main.o: Core/Src/main.c Core/Inc/main.h
 	$(CC) $(CFLAGS) $(CONST) $(DEBUGINFO) $(INCLUDES) Core/Src/main.c -o build/main.o
 	#                           		 			  $^              -o $@
@@ -111,4 +114,6 @@ clean:
 	rm -rf build/*.o build/*.d build/*.elf build/*.hex build/*.list build/*.bin build/*.map build/*.su
 	
 load:
-	openocd -f board/stm32f4discovery.cfg
+	openocd -f /usr/local/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/local/share/openocd/scripts/target/stm32f1x.cfg
+	
+	.PHONY all makebuild clean load
