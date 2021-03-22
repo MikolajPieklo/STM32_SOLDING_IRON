@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: check
+      run: ls -la
     - name: Install compiler
       run: sudo apt install gcc-arm-none-eabi
     - name: make
