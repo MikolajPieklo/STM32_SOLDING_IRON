@@ -32,7 +32,7 @@ INCLUDES= -ICore/Inc/ -IDrivers/STM32F1xx_HAL_Driver/Inc/ -IDrivers/CMSIS/Device
 LDFLAGS= -mcpu=$(MACH) -mthumb -mfloat-abi=soft -T"STM32F103C8TX_FLASH.ld" \
 	$(MAP) $(GC) -static $(USE_NANO)  -Wl,--start-group -lc -lm -Wl,--end-group 
 
-all: makebuild build/target.elf build/target.hex
+all: makebuild build/target.elf build/target.hex test1
 	
 makebuild:	
 	@if [ ! -e build ]; then mkdir build; fi
@@ -110,8 +110,12 @@ build/target.hex: Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_ll_utils.c
 	arm-none-eabi-objdump -h -S  build/target.elf > build/target.list
 	arm-none-eabi-objcopy -O binary  build/target.elf  build/target.bin
 	 
+test1:
+	@echo ---Building unit tests.---
+	gcc Core/Test/test1.c -I/usr/local/include/unity/ -L/usr/local/lib/ -lunity -o build/test1
+	 
 clean:
-	rm -rf build/*.o build/*.d build/*.elf build/*.hex build/*.list build/*.bin build/*.map build/*.su
+	rm -rf ./build/
 	
 load:
 	openocd -f /usr/local/share/openocd/scripts/interface/stlink-v2.cfg -f /usr/local/share/openocd/scripts/target/stm32f1x.cfg
