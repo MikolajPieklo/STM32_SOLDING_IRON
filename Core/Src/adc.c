@@ -20,6 +20,10 @@
 /* Includes ------------------------------------------------------------------*/
 #include "adc.h"
 
+uint32_t ADC_CONVERTED_DATA_BUFFER_SIZE;
+uint16_t aADCxConvertedData[4];
+uint32_t wait_loop_index;
+
 void ADC1_Init()
 {
    LL_AHB1_GRP1_EnableClock (LL_AHB1_GRP1_PERIPH_DMA1); // Enable the peripheral clock of DMA

@@ -24,6 +24,9 @@ const float Kd = 0.1;
 const float HeatingCoefficientA = 0.1476835343;
 const float HeatingCoefficientB = 19.7004294;
 
+extern uint32_t ADC_CONVERTED_DATA_BUFFER_SIZE;
+extern uint16_t aADCxConvertedData[4];
+
 volatile bool TriggerPid = false;
 
 void DisplayTargetTemperature(uint16_t pwm)
