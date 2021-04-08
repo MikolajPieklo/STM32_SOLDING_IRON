@@ -6,6 +6,9 @@
  */
 #include "myDelay.h"
 
+volatile uint32_t SysTickValue;
+volatile uint32_t tickstart;
+
 void Delay(uint32_t msDelay)
 {
     tickstart = SysTickValue;
