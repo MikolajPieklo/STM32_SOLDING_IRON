@@ -23,8 +23,9 @@ void SystemClock_Config(void);
 typedef enum State
 {
    state_ok = 0,
-   state_temperature_high = 1,
-   state_adcfull = 2
+   state_target_temperature_high = 1,
+   state_adcfull = 2,
+   state_current_temperature_high = 3
 }
 state_t;
 
@@ -37,12 +38,12 @@ extern uint16_t aADCxConvertedData[4];
 volatile bool TriggerPid = false;
 state_t State;
 
-static inline void displayTargetTemperature(uint32_t temperature);
+static inline void displayTargetTemperature(int32_t temperature);
 static inline void displayCurrentTemperature(Temperature_t* temperature);
 static inline void dsiplayCurrentPWM(uint32_t valuePWM);
 static inline void checkError(void);
 
-static inline void displayTargetTemperature(uint32_t temperature)
+static inline void displayTargetTemperature(int32_t temperature)
 {
    char* tab = (char*) malloc (sizeof(char*) * 4);
 
@@ -50,7 +51,7 @@ static inline void displayTargetTemperature(uint32_t temperature)
    {
       sprintf (tab, "E01", temperature);
       lcd_str_XY (2, 0, tab);
-      State = state_temperature_high;
+      State = state_target_temperature_high;
    }
    else
    {
@@ -72,7 +73,7 @@ static inline void displayCurrentTemperature(Temperature_t* temperature)
       }
       lcd_str_XY (9, 0, "HEATING");
 
-      float heaterInV = heaterInV = 660 * aADCxConvertedData[0] / 819;
+      float heaterInV = 660 * aADCxConvertedData[0] / 819;
 
       // wzmacniacz nieodwracajacy
       // Uin=(ADC*R1)/(R1+R2); // wzmacniacz operacyjny
@@ -80,7 +81,13 @@ static inline void displayCurrentTemperature(Temperature_t* temperature)
       // Current_Temperature=Heating_A_coefficient*R1+Heating_B_coefficient;
 
       float voltage2Temp = HeatingCoefficientA * heaterInV + HeatingCoefficientB;
-      temperature->current = (uint16_t) voltage2Temp;
+      temperature->current = (int16_t) voltage2Temp;
+
+      if (temperature->current > 500)
+      {
+         State = state_target_temperature_high;
+         break;
+      }
 
       char* tab = (char*) malloc (sizeof(char*) * 4);
       sprintf (tab, "%3d", temperature->current);
@@ -189,7 +196,7 @@ int main(void)
             counterTim = 0;
          }
          oldCounterTim = counterTim;
-         temperature.target = 10 * counterTim;
+         temperature.target = (int32_t) 10 * counterTim;
          displayTargetTemperature(temperature.target);
       }
 
