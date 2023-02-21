@@ -3,6 +3,7 @@
 #include <adc.h>
 #include <gpio.h>
 #include <tim.h>
+#include <wdg.h>
 
 /* Private includes ----------------------------------------------------------*/
 #include <HD44780.h>
@@ -113,6 +114,7 @@ int main(void)
    TIM2_PWM_Init ();
    TIM3_Init ();
    LCD_Init ();
+   WDG_Init();
 
    ADC_CONVERTED_DATA_BUFFER_SIZE = 3; // zmieniono
    ADC1_Init ();
@@ -172,6 +174,7 @@ int main(void)
 
          TriggerPid = false;
       }
+      WDG_Service();
 
       // aADCxConvertedData[2]=123;
       // aADCxConvertedData[3]=0;

@@ -98,6 +98,9 @@ $(OUT_DIR)/gpio.o: Core/Src/gpio.c Core/Inc/gpio.h
 $(OUT_DIR)/tim.o: Core/Src/tim.c Core/Inc/tim.h
 	$(CC) $(CFLAGS) $(CONST) $(DEBUGINFO) $(INCLUDES) Core/Src/tim.c -o $(OUT_DIR)/tim.o	
 	
+$(OUT_DIR)/wdg.o: Core/Src/wdg.c Core/Inc/wdg.h
+	$(CC) $(CFLAGS) $(CONST) $(DEBUGINFO) $(INCLUDES) Core/Src/wdg.c -o $(OUT_DIR)/wdg.o	
+	
 $(OUT_DIR)/myDelay.o: Core/Src/myDelay.c Core/Inc/myDelay.h
 	$(CC) $(CFLAGS) $(CONST) $(DEBUGINFO) $(INCLUDES) Core/Src/myDelay.c -o $(OUT_DIR)/myDelay.o	
 	
@@ -160,6 +163,7 @@ $(OUT_DIR)/target.elf: \
 	$(OUT_DIR)/HD44780.o \
 	$(OUT_DIR)/gpio.o \
 	$(OUT_DIR)/tim.o \
+	$(OUT_DIR)/wdg.o \
 	$(OUT_DIR)/adc.o \
 	$(OUT_DIR)/myDelay.o \
 	$(OUT_DIR)/sys.o \
