@@ -178,23 +178,18 @@ int main(void)
       counterTim = LL_TIM_GetCounter (TIM1);
       if (counterTim != oldCounterTim)
       {
-         oldCounterTim = counterTim;
-         if ((LL_TIM_GetDirection (TIM1) == LL_TIM_COUNTERDIRECTION_UP) && (counterTim == 0))
+         if ((LL_TIM_GetDirection (TIM1) == LL_TIM_COUNTERDIRECTION_UP) && (oldCounterTim >= 40) && (counterTim <= 10))
          {
             LL_TIM_SetCounter (TIM1, 50); // set max.
-            counterTim = 500;
+            counterTim = 50;
          }
-         else if ((LL_TIM_GetDirection (TIM1) == LL_TIM_COUNTERDIRECTION_DOWN) && (counterTim == 50))
+         else if ((LL_TIM_GetDirection (TIM1) == LL_TIM_COUNTERDIRECTION_DOWN) && (oldCounterTim <= 10) && (counterTim >= 40) )
          {
             LL_TIM_SetCounter (TIM1, 0);
-            counterTim = 10;
+            counterTim = 0;
          }
-         else
-         {
-            counterTim = 10 * counterTim;
-         }
-         temperature.target = counterTim;
-
+         oldCounterTim = counterTim;
+         temperature.target = 10 * counterTim;
          displayTargetTemperature(temperature.target);
       }
 
