@@ -132,6 +132,18 @@ void LCD_Init(void)
     lcd_char(0x14);
     lcd_write_cmd(LCDC_SET_CGRAM_ADDR | 0x17);
     lcd_char(0x08);
+
+    lcd_str_XY (0, 0, "T 000");/* Target temperature. */
+    lcd_char_XY (1, 0, 0x01);
+    lcd_char_XY (5, 0, 0xDF);
+    lcd_char_XY (6, 0, 'C');
+    lcd_str_XY (9, 0, "NOT CON");
+    lcd_str_XY (0, 1, "T 000");/* Current temperature. */
+    lcd_char_XY (1, 1, 0x02);
+    lcd_char_XY (5, 1, 0xDF);
+    lcd_char_XY (6, 1, 'C');
+    lcd_char_XY (10, 1, 0x00);
+    lcd_str_XY (14, 1, "0%");
 }
 
 void lcd_locate(uint8_t x, uint8_t y)
