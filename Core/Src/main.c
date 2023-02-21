@@ -128,6 +128,10 @@ int main(void)
    uint32_t counterTim = 0;
    uint32_t oldCounterTim = 0;
 
+   LL_GPIO_SetOutputPin (Buzzer_GPIO_Port, Buzzer_Pin);
+   Delay(30);
+   LL_GPIO_ResetOutputPin (Buzzer_GPIO_Port, Buzzer_Pin);
+
    while (1)
    {
 
