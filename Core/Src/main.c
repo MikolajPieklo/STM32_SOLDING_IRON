@@ -17,9 +17,6 @@
 void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
-// Avg_Slope 4.0   4.3    4.6 mV/°C
-// V25       1.34  1.43   1.52 V
-
 typedef enum State
 {
    state_ok = 0,
@@ -29,6 +26,8 @@ typedef enum State
 }
 state_t;
 
+// Avg_Slope 4.0   4.3    4.6 mV/°C
+// V25       1.34  1.43   1.52 V
 const float HeatingCoefficientA = 0.1476835343;
 const float HeatingCoefficientB = 19.7004294;
 
