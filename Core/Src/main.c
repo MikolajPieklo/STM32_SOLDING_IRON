@@ -28,8 +28,10 @@ state_t;
 
 // Avg_Slope 4.0   4.3    4.6 mV/°C
 // V25       1.34  1.43   1.52 V
-const float HeatingCoefficientA = 0.1476835343;
-const float HeatingCoefficientB = 19.7004294;
+//const float HeatingCoefficientA = 0.1476835343;
+//const float HeatingCoefficientB = 19.7004294;
+const float HeatingCoefficientA = 0.37386446;
+const float HeatingCoefficientB = -121.49858;
 
 extern uint32_t ADC_CONVERTED_DATA_BUFFER_SIZE;
 extern uint16_t aADCxConvertedData[4];

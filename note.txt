@@ -1,4 +1,4 @@
-5- blue - sensor
+5- blue - sensor 40-60R
 4- gray - sensor
 3- black -
 2- brown -heater
