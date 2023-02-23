@@ -9,8 +9,7 @@ extern "C" {
 
 #define ADC_DELAY_ENABLE_CALIB_CPU_CYCLES (LL_ADC_DELAY_ENABLE_CALIB_ADC_CYCLES * 32)
 
-void ADC1_Init(void);
-
+void ADC1_Init(uint16_t* data, uint32_t size);
 
 #ifdef __cplusplus
 }

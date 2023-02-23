@@ -17,6 +17,9 @@
 void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
+#define ADC_BUFFER_SIZE 100
+#define MAX_TEMPERATURE 500
+
 typedef enum State
 {
    state_ok = 0,
@@ -33,7 +36,8 @@ state_t;
 const float HeatingCoefficientA = 0.37386446;
 const float HeatingCoefficientB = -121.49858;
 
-extern uint16_t aADCxConvertedData[4];
+uint32_t ADC_CONVERTED_DATA_BUFFER_SIZE = ADC_BUFFER_SIZE;
+uint16_t aADCxConvertedData[ADC_BUFFER_SIZE];
 
 volatile bool TriggerPid = false;
 state_t State;
@@ -65,6 +69,8 @@ static inline void displayCurrentTemperature(Temperature_t* temperature)
 {
    do
    {
+      uint32_t i, sum = 0;
+
       if (aADCxConvertedData[0] == 4095)
       {
          lcd_str_XY (9, 0, "ADCFULL");
@@ -73,7 +79,14 @@ static inline void displayCurrentTemperature(Temperature_t* temperature)
       }
       lcd_str_XY (9, 0, "HEATING");
 
-      float heaterInV = 660 * aADCxConvertedData[0] / 819;
+      for (i = 0; i < ADC_BUFFER_SIZE; i++)
+      {
+         sum += aADCxConvertedData[i];
+      }
+
+      sum = (uint32_t)sum / ADC_BUFFER_SIZE;
+
+      float heaterInV = 660 * sum / 819;
 
       // wzmacniacz nieodwracajacy
       // Uin=(ADC*R1)/(R1+R2); // wzmacniacz operacyjny
@@ -83,9 +96,9 @@ static inline void displayCurrentTemperature(Temperature_t* temperature)
       float voltage2Temp = HeatingCoefficientA * heaterInV + HeatingCoefficientB;
       temperature->current = (int16_t) voltage2Temp;
 
-      if (temperature->current > 500)
+      if (temperature->current > MAX_TEMPERATURE)
       {
-         State = state_target_temperature_high;
+         State = state_current_temperature_high;
          break;
       }
 
@@ -122,12 +135,26 @@ static inline void checkError(void)
    {
       if (printed == false)
       {
-         lcd_str_XY (8, 1, "E");
+         switch (State)
+         {
+            case state_target_temperature_high:
+               lcd_str_XY (8, 1, "E1");
+               break;
+            case state_adcfull:
+               lcd_str_XY (8, 1, "E2");
+               break;
+            case state_current_temperature_high:
+               lcd_str_XY (8, 1, "E3");
+               break;
+            default:
+               lcd_str_XY (8, 1, "E*");
+               break;
+         }
          printed = true;
       }
       else
       {
-         lcd_str_XY (8, 1, " ");
+         lcd_str_XY (8, 1, "  ");
          printed = false;
       }
    }
@@ -147,13 +174,13 @@ int main(void)
 
    LL_SYSTICK_EnableIT ();
 
-   GPIO_Init ();
-   TIM1_Encoder_Init ();
-   TIM2_PWM_Init ();
-   TIM3_Init ();
-   LCD_Init ();
-   ADC1_Init ();
+   GPIO_Init();
+   TIM1_Encoder_Init();
+   TIM2_PWM_Init();
+   LCD_Init();
+   ADC1_Init(aADCxConvertedData, ADC_CONVERTED_DATA_BUFFER_SIZE);
    WDG_Init();
+   TIM3_Init();
 
    LL_TIM_EnableCounter (TIM1);
    LL_TIM_EnableCounter (TIM3);
@@ -164,33 +191,33 @@ int main(void)
    uint32_t counterTim = 0;
    uint32_t oldCounterTim = 0;
 
-   LL_GPIO_SetOutputPin (Buzzer_GPIO_Port, Buzzer_Pin);
+   LL_GPIO_SetOutputPin(Buzzer_GPIO_Port, Buzzer_Pin);
    Delay(30);
-   LL_GPIO_ResetOutputPin (Buzzer_GPIO_Port, Buzzer_Pin);
+   LL_GPIO_ResetOutputPin(Buzzer_GPIO_Port, Buzzer_Pin);
 
    while (1)
    {
 
-      if ((LL_GPIO_IsInputPinSet (ENCODER_SW_GPIO_Port, ENCODER_SW_Pin)) == 1)
+      if ((LL_GPIO_IsInputPinSet(ENCODER_SW_GPIO_Port, ENCODER_SW_Pin)) == 1)
       {
-         LL_GPIO_ResetOutputPin (Buzzer_GPIO_Port, Buzzer_Pin);
+         LL_GPIO_ResetOutputPin(Buzzer_GPIO_Port, Buzzer_Pin);
       }
       else
       {
-         LL_GPIO_SetOutputPin (Buzzer_GPIO_Port, Buzzer_Pin);
+         LL_GPIO_SetOutputPin(Buzzer_GPIO_Port, Buzzer_Pin);
       }
 
-      counterTim = LL_TIM_GetCounter (TIM1);
+      counterTim = LL_TIM_GetCounter(TIM1);
       if (counterTim != oldCounterTim)
       {
-         if ((LL_TIM_GetDirection (TIM1) == LL_TIM_COUNTERDIRECTION_UP) && (oldCounterTim >= 40) && (counterTim <= 10))
+         if ((LL_TIM_GetDirection(TIM1) == LL_TIM_COUNTERDIRECTION_UP) && (oldCounterTim >= 40) && (counterTim <= 10))
          {
-            LL_TIM_SetCounter (TIM1, 50); // set max.
+            LL_TIM_SetCounter(TIM1, 50); // set max.
             counterTim = 50;
          }
-         else if ((LL_TIM_GetDirection (TIM1) == LL_TIM_COUNTERDIRECTION_DOWN) && (oldCounterTim <= 10) && (counterTim >= 40) )
+         else if ((LL_TIM_GetDirection(TIM1) == LL_TIM_COUNTERDIRECTION_DOWN) && (oldCounterTim <= 10) && (counterTim >= 40) )
          {
-            LL_TIM_SetCounter (TIM1, 0);
+            LL_TIM_SetCounter(TIM1, 0);
             counterTim = 0;
          }
          oldCounterTim = counterTim;
@@ -202,7 +229,7 @@ int main(void)
       {
          displayCurrentTemperature(&temperature);
 
-         PID (&pwm, &temperature);
+         PID(&pwm, &temperature);
 
          if (State == state_ok)
          {
@@ -233,38 +260,38 @@ int main(void)
 
 void SystemClock_Config(void)
 {
-   LL_FLASH_SetLatency (LL_FLASH_LATENCY_2);
+   LL_FLASH_SetLatency(LL_FLASH_LATENCY_2);
 
-   if (LL_FLASH_GetLatency () != LL_FLASH_LATENCY_2)
+   if (LL_FLASH_GetLatency() != LL_FLASH_LATENCY_2)
    {
-      Error_Handler ();
+      Error_Handler();
    }
-   LL_RCC_HSE_Enable ();
+   LL_RCC_HSE_Enable();
 
 /* Wait till HSE is ready */
-   while (LL_RCC_HSE_IsReady () != 1)
+   while (LL_RCC_HSE_IsReady() != 1)
    {
    }
-   LL_RCC_PLL_ConfigDomain_SYS (LL_RCC_PLLSOURCE_HSE_DIV_1, LL_RCC_PLL_MUL_9);
-   LL_RCC_PLL_Enable ();
+   LL_RCC_PLL_ConfigDomain_SYS(LL_RCC_PLLSOURCE_HSE_DIV_1, LL_RCC_PLL_MUL_9);
+   LL_RCC_PLL_Enable();
 
 /* Wait till PLL is ready */
    while (LL_RCC_PLL_IsReady () != 1)
    {
    }
-   LL_RCC_SetAHBPrescaler (LL_RCC_SYSCLK_DIV_1);
-   LL_RCC_SetAPB1Prescaler (LL_RCC_APB1_DIV_2);
-   LL_RCC_SetAPB2Prescaler (LL_RCC_APB2_DIV_1);
-   LL_RCC_SetSysClkSource (LL_RCC_SYS_CLKSOURCE_PLL);
+   LL_RCC_SetAHBPrescaler(LL_RCC_SYSCLK_DIV_1);
+   LL_RCC_SetAPB1Prescaler(LL_RCC_APB1_DIV_2);
+   LL_RCC_SetAPB2Prescaler(LL_RCC_APB2_DIV_1);
+   LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_PLL);
 
 /* Wait till System clock is ready */
-   while (LL_RCC_GetSysClkSource () != LL_RCC_SYS_CLKSOURCE_STATUS_PLL)
+   while (LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_PLL)
    {
    }
-   LL_Init1msTick (72000000);
-   LL_SYSTICK_SetClkSource (LL_SYSTICK_CLKSOURCE_HCLK);
-   LL_SetSystemCoreClock (72000000);
-   LL_RCC_SetADCClockSource (LL_RCC_ADC_CLKSRC_PCLK2_DIV_6);
+   LL_Init1msTick(72000000);
+   LL_SYSTICK_SetClkSource(LL_SYSTICK_CLKSOURCE_HCLK);
+   LL_SetSystemCoreClock(72000000);
+   LL_RCC_SetADCClockSource(LL_RCC_ADC_CLKSRC_PCLK2_DIV_6);
 }
 
 void Error_Handler(void)

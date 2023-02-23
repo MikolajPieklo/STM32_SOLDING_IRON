@@ -20,12 +20,10 @@
 /* Includes ------------------------------------------------------------------*/
 #include "adc.h"
 
-uint32_t ADC_CONVERTED_DATA_BUFFER_SIZE = 1;
-uint16_t aADCxConvertedData[4];
-uint32_t wait_loop_index;
-
-void ADC1_Init()
+void ADC1_Init(uint16_t* data, uint32_t size)
 {
+   uint32_t wait_loop_index;
+
    LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1); // Enable the peripheral clock of DMA
 
    NVIC_SetPriority(DMA1_Channel1_IRQn, 1); // DMA IRQ lower priority than ADC IRQ
@@ -36,13 +34,13 @@ void ADC1_Init()
 
    LL_DMA_SetMode         (DMA1, LL_DMA_CHANNEL_1, LL_DMA_MODE_CIRCULAR);
    LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_1, LL_DMA_PERIPH_NOINCREMENT);
-   LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_1, LL_DMA_PERIPH_NOINCREMENT);
+   LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_1, LL_DMA_MEMORY_INCREMENT);
    LL_DMA_SetPeriphSize   (DMA1, LL_DMA_CHANNEL_1, LL_DMA_PDATAALIGN_HALFWORD);
    LL_DMA_SetMemorySize   (DMA1, LL_DMA_CHANNEL_1, LL_DMA_MDATAALIGN_HALFWORD);
-   LL_DMA_ConfigAddresses (DMA1, LL_DMA_CHANNEL_1, LL_ADC_DMA_GetRegAddr (ADC1, LL_ADC_DMA_REG_REGULAR_DATA),
-      (uint32_t) &aADCxConvertedData, LL_DMA_DIRECTION_PERIPH_TO_MEMORY); // Set DMA transfer addresses of source and destination
+   LL_DMA_ConfigAddresses (DMA1, LL_DMA_CHANNEL_1, LL_ADC_DMA_GetRegAddr(ADC1, LL_ADC_DMA_REG_REGULAR_DATA),
+      (uint32_t) data, LL_DMA_DIRECTION_PERIPH_TO_MEMORY); // Set DMA transfer addresses of source and destination
 
-   LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, ADC_CONVERTED_DATA_BUFFER_SIZE); // Set DMA transfer size
+   LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, size); // Set DMA transfer size
    LL_DMA_EnableIT_TC  (DMA1, LL_DMA_CHANNEL_1);    // transfer complete
    LL_DMA_EnableIT_TE  (DMA1, LL_DMA_CHANNEL_1);    // transfer error
    LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_1);    // Enable the DMA transfer
@@ -83,8 +81,8 @@ void ADC1_Init()
       wait_loop_index--;
    }
 
-    LL_ADC_StartCalibration(ADC1); // Run ADC self calibration
-    while (LL_ADC_IsCalibrationOnGoing(ADC1) != 0);
+   LL_ADC_StartCalibration(ADC1); // Run ADC self calibration
+   while (LL_ADC_IsCalibrationOnGoing(ADC1) != 0);
 
    LL_ADC_REG_StartConversionSWStart(ADC1);
 
