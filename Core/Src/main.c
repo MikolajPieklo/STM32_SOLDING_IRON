@@ -33,7 +33,6 @@ state_t;
 const float HeatingCoefficientA = 0.37386446;
 const float HeatingCoefficientB = -121.49858;
 
-extern uint32_t ADC_CONVERTED_DATA_BUFFER_SIZE;
 extern uint16_t aADCxConvertedData[4];
 
 volatile bool TriggerPid = false;
@@ -153,10 +152,8 @@ int main(void)
    TIM2_PWM_Init ();
    TIM3_Init ();
    LCD_Init ();
-   WDG_Init();
-
-   ADC_CONVERTED_DATA_BUFFER_SIZE = 3; // zmieniono
    ADC1_Init ();
+   WDG_Init();
 
    LL_TIM_EnableCounter (TIM1);
    LL_TIM_EnableCounter (TIM3);
