@@ -175,9 +175,9 @@ $(OUT_DIR)/target.elf: \
 		@echo "$(ccblue)\nLinking$(ccend)"
 		$(CC) $(LDFLAGS) $^ -o $@
 
-$(OUT_DIR)/target.hex: Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_ll_utils.c
+$(OUT_DIR)/target.hex:
 	$(CC2HEX) -O ihex $(OUT_DIR)/target.elf $(OUT_DIR)/target.hex
-		
+
 	@echo "$(ccblue)\nGenerating list file$(ccend)"
 	arm-none-eabi-objdump -h -S  $(OUT_DIR)/target.elf > $(OUT_DIR)/target.list
 	
@@ -187,7 +187,7 @@ $(OUT_DIR)/target.hex: Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_ll_utils.c
 	@echo "$(ccpurple)"
 	arm-none-eabi-size $(OUT_DIR)/target.elf -A -x
 	@echo "$(ccend)"
-	 
+
 clean:
 	rm -rf $(OUT_DIR)
 

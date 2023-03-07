@@ -33,8 +33,14 @@ state_t;
 // V25       1.34  1.43   1.52 V
 //const float HeatingCoefficientA = 0.1476835343;
 //const float HeatingCoefficientB = 19.7004294;
-const float HeatingCoefficientA = 0.37386446;
-const float HeatingCoefficientB = -121.49858;
+
+//data for adc without cal
+//const float HeatingCoefficientA = 0.37386446;
+//const float HeatingCoefficientB = -121.49858;
+
+//data for adc with cal
+const float HeatingCoefficientA = 0.39762748;
+const float HeatingCoefficientB = -150.204373;
 
 uint32_t ADC_CONVERTED_DATA_BUFFER_SIZE = ADC_BUFFER_SIZE;
 uint16_t aADCxConvertedData[ADC_BUFFER_SIZE];
