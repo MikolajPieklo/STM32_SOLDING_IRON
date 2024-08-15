@@ -11,7 +11,8 @@ volatile uint32_t tickstart;
 
 void Delay(uint32_t msDelay)
 {
-    tickstart = SysTickValue;
-    while ((SysTickValue - tickstart) < msDelay) {
-    }
+   tickstart = SysTickValue;
+   while ((SysTickValue - tickstart) < msDelay)
+   {
+   }
 }

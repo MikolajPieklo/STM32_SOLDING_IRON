@@ -5,11 +5,19 @@
  *      Author: Mikolaj
  */
 
-#include "stdint.h"
+#include <stdint.h>
 
 #ifndef MYDELAY_H_
 #define MYDELAY_H_
 
-void Delay(uint32_t ms);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void Delay (uint32_t ms);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* MYDELAY_H_ */

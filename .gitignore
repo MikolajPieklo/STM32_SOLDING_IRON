@@ -1,6 +1,7 @@
 out
 App
 .vscode
+.vscode-ctags
 #################
 ## Eclipse
 #################

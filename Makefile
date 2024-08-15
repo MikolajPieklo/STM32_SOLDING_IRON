@@ -30,6 +30,7 @@ $(error error: ARM package '$(GCC_PATH)' does not exist!)
 else
 CC_VERSION := $(shell arm-none-eabi-gcc -dumpversion)
 CC := arm-none-eabi-gcc
+C++ := arm-none-eabi-g++
 CC2HEX := arm-none-eabi-objcopy
 $(info Compiler version: $(CC_VERSION))
 endif
@@ -83,7 +84,7 @@ make$(OUT_DIR):
 	@if [ ! -e $(APP_DIR) ];    then mkdir $(APP_DIR);    fi
 
 $(OUT_DIR)/main.o: Core/Src/main.c Core/Inc/main.h
-	$(CC) $(CFLAGS) $(CONST) $(DEBUGINFO) $(INCLUDES) Core/Src/main.c -o $(OUT_DIR)/main.o
+	$(C++) $(CFLAGS) $(CONST) $(DEBUGINFO) $(INCLUDES) Core/Src/main.c -o $(OUT_DIR)/main.o
 	#                           		 			  $^              -o $@
 	
 $(OUT_DIR)/HD44780.o: Core/Src/HD44780.c Core/Inc/HD44780.h
@@ -148,6 +149,9 @@ $(DRIVER_DIR)/stm32f1xx_ll_utils.o: Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_l
 	
 $(APP_DIR)/pid.o: App/Src/pid.c
 	$(CC) $(CFLAGS) $(CONST) $(DEBUGINFO) ${INCLUDES} -o $@ $^
+	
+$(APP_DIR)/test.o: App/Src/test.cpp
+	$(C++) $(CFLAGS) $(CONST) $(DEBUGINFO) ${INCLUDES} -o $@ $^
 
 $(OUT_DIR)/target.elf: \
 	$(OUT_DIR)/main.o \
@@ -171,7 +175,8 @@ $(OUT_DIR)/target.elf: \
 	$(OUT_DIR)/syscalls.o \
 	$(OUT_DIR)/sysmem.o \
 	$(OUT_DIR)/startup_stm32f103c8tx.o \
-	$(APP_DIR)/pid.o 
+	$(APP_DIR)/pid.o \
+	$(APP_DIR)/test.o
 		@echo "$(ccblue)\nLinking$(ccend)"
 		$(CC) $(LDFLAGS) $^ -o $@
 

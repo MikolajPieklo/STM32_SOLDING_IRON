@@ -6,10 +6,14 @@
  */
 //#include "stm32f1xx_hal_gpio.h"
 
-#include "stdint.h"
+#include <stdint.h>
 
 #ifndef HD44780_H_
 #define HD44780_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define LCD_CLEAR 0x01
 #define LCD_HOME 0x02
@@ -47,14 +51,12 @@
 #define LCD_LINE1 0x00
 #define LCD_LINE2 0x40
 
-void lcd_sendHalf(uint8_t data);
-void lcd_write_byte(uint8_t data);
-void lcd_write_cmd(uint8_t cmd);
-void lcd_char(uint8_t data);
-void LCD_Init(void);
-void lcd_locate(uint8_t x, uint8_t y);
-void lcd_str(uint8_t *text);
-void lcd_str_XY(uint8_t x, uint8_t y, char *text);
-void lcd_char_XY(uint8_t x, uint8_t y, uint8_t znak);
+void LCD_Init (void);
+void LCD_Str_XY (uint8_t x, uint8_t y, char *text);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HD44780_H_ */
