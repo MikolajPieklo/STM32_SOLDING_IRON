@@ -8,11 +8,11 @@
 /* Private includes ----------------------------------------------------------*/
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <HD44780.h>
-#include <myDelay.h>
+#include <delay.h>
 #include <pid.h>
-#include <stdlib.h>
 #include <test.hpp>
 
 /* Private function prototypes -----------------------------------------------*/
@@ -46,17 +46,25 @@ const float HeatingCoefficientB = -150.204373;
 uint32_t ADC_CONVERTED_DATA_BUFFER_SIZE = ADC_BUFFER_SIZE;
 uint16_t aADCxConvertedData[ADC_BUFFER_SIZE];
 
-volatile bool TriggerPid = false;
-state_t State;
+volatile bool   TriggerPid = false;
+state_t         State;
+static bool     beep_is_active = false;
+static uint32_t beep_time = 0;
+static uint32_t beep_active_time = 30;
+static uint32_t key_state = 0;
+static uint32_t key_time = 0;
 
 static inline void displayTargetTemperature(int32_t temperature);
 static inline void displayCurrentTemperature(temperature_t *temperature);
 static inline void dsiplayCurrentPWM(uint32_t valuePWM);
 static inline void checkError(void);
+static void        beep_start(uint32_t ms);
+static void        beep_service(void);
+static void        key_machine(void);
 
 static inline void displayTargetTemperature(int32_t temperature)
 {
-   char *tab = (char *)malloc(sizeof(char *) * 4);
+   char *tab = (char *) malloc(sizeof(char *) * 4);
 
    if (temperature > 999)
    {
@@ -91,7 +99,7 @@ static inline void displayCurrentTemperature(temperature_t *temperature)
          sum += aADCxConvertedData[i];
       }
 
-      sum = (uint32_t)sum / ADC_BUFFER_SIZE;
+      sum = (uint32_t) sum / ADC_BUFFER_SIZE;
 
       float heaterInV = 660 * sum / 819;
 
@@ -101,7 +109,7 @@ static inline void displayCurrentTemperature(temperature_t *temperature)
       // Current_Temperature=Heating_A_coefficient*R1+Heating_B_coefficient;
 
       float voltage2Temp = HeatingCoefficientA * heaterInV + HeatingCoefficientB;
-      temperature->current = (int16_t)voltage2Temp;
+      temperature->current = (int16_t) voltage2Temp;
 
       if (temperature->current > MAX_TEMPERATURE)
       {
@@ -109,18 +117,17 @@ static inline void displayCurrentTemperature(temperature_t *temperature)
          break;
       }
 
-      char *tab = (char *)malloc(sizeof(char *) * 4);
+      char *tab = (char *) malloc(sizeof(char *) * 4);
       sprintf(tab, "%3d", temperature->current);
       LCD_Str_XY(2, 1, tab);
       free(tab);
-   }
-   while (0);
+   } while (0);
 }
 
 static inline void dsiplayCurrentPWM(uint32_t valuePWM)
 {
    uint8_t result = 0;
-   char *tab = (char *)malloc(sizeof(char *) * 4);
+   char   *tab = (char *) malloc(sizeof(char *) * 4);
    if (valuePWM > 999)
    {
       sprintf(tab, "E02", result);
@@ -128,7 +135,7 @@ static inline void dsiplayCurrentPWM(uint32_t valuePWM)
    }
    else
    {
-      result = (uint8_t)(0.2 * valuePWM);
+      result = (uint8_t) (0.2 * valuePWM);
       sprintf(tab, "%3d", result);
       LCD_Str_XY(12, 1, tab);
    }
@@ -144,18 +151,18 @@ static inline void checkError(void)
       {
          switch (State)
          {
-            case state_target_temperature_high:
-               LCD_Str_XY(8, 1, "E1");
-               break;
-            case state_adcfull:
-               LCD_Str_XY(8, 1, "E2");
-               break;
-            case state_current_temperature_high:
-               LCD_Str_XY(8, 1, "E3");
-               break;
-            default:
-               LCD_Str_XY(8, 1, "E*");
-               break;
+         case state_target_temperature_high:
+            LCD_Str_XY(8, 1, "E1");
+            break;
+         case state_adcfull:
+            LCD_Str_XY(8, 1, "E2");
+            break;
+         case state_current_temperature_high:
+            LCD_Str_XY(8, 1, "E3");
+            break;
+         default:
+            LCD_Str_XY(8, 1, "E*");
+            break;
          }
          printed = true;
       }
@@ -163,6 +170,72 @@ static inline void checkError(void)
       {
          LCD_Str_XY(8, 1, "  ");
          printed = false;
+      }
+   }
+}
+
+static void beep_start(uint32_t ms)
+{
+   if (false == beep_is_active)
+   {
+      beep_time = TS_Get_ms();
+      beep_is_active = true;
+      beep_active_time = ms;
+   }
+}
+
+static void beep_service(void)
+{
+   if (true == beep_is_active)
+   {
+      if (beep_time + beep_active_time > TS_Get_ms())
+      {
+         LL_GPIO_SetOutputPin(Buzzer_GPIO_Port, Buzzer_Pin);
+      }
+      else
+      {
+         LL_GPIO_ResetOutputPin(Buzzer_GPIO_Port, Buzzer_Pin);
+         beep_is_active = false;
+      }
+   }
+}
+
+static void key_machine(void)
+{
+   if (LL_GPIO_IsInputPinSet(ENCODER_SW_GPIO_Port, ENCODER_SW_Pin) == 0)
+   {
+      switch (key_state)
+      {
+      case 0:
+         key_time = TS_Get_ms();
+         key_state = 1;
+         break;
+      case 1:
+         if (key_time + 1000 < TS_Get_ms())
+         {
+            key_state = 2;
+         }
+         break;
+      case 2:
+         break;
+      }
+   }
+   else
+   {
+      if (key_state == 1)
+      {
+         LL_TIM_SetCounter(TIM1, 32);
+         key_state = 0;
+         beep_start(30);
+      }
+      else if (key_state == 2)
+      {
+         LL_TIM_SetCounter(TIM1, 10);
+         key_state = 0;
+         beep_start(200);
+      }
+      else
+      {
       }
    }
 }
@@ -192,43 +265,36 @@ int main(void)
    LL_TIM_EnableCounter(TIM1);
    LL_TIM_EnableCounter(TIM3);
 
-   temperature_t temperature = { 0, 0 };
-   int32_t pwm = 0;
+   temperature_t temperature = {0, 0};
+   int32_t       pwm = 0;
 
    uint32_t counterTim = 0;
    uint32_t oldCounterTim = 0;
 
-   LL_GPIO_SetOutputPin(Buzzer_GPIO_Port, Buzzer_Pin);
-   Delay(30);
-   LL_GPIO_ResetOutputPin(Buzzer_GPIO_Port, Buzzer_Pin);
+   beep_start(30);
 
    while (1)
    {
-      if ((LL_GPIO_IsInputPinSet(ENCODER_SW_GPIO_Port, ENCODER_SW_Pin)) == 1)
-      {
-         LL_GPIO_ResetOutputPin(Buzzer_GPIO_Port, Buzzer_Pin);
-      }
-      else
-      {
-         LL_GPIO_SetOutputPin(Buzzer_GPIO_Port, Buzzer_Pin);
-      }
+      beep_service();
+      key_machine();
 
       counterTim = LL_TIM_GetCounter(TIM1);
       if (counterTim != oldCounterTim)
       {
-         if ((LL_TIM_GetDirection(TIM1) == LL_TIM_COUNTERDIRECTION_UP) && (oldCounterTim >= 40) && (counterTim <= 10))
+         if ((LL_TIM_GetDirection(TIM1) == LL_TIM_COUNTERDIRECTION_UP) && (oldCounterTim >= 40)
+             && (counterTim <= 10))
          {
-            LL_TIM_SetCounter(TIM1, 50);   // set max.
+            LL_TIM_SetCounter(TIM1, 50); // set max.
             counterTim = 50;
          }
-         else if ((LL_TIM_GetDirection(TIM1) == LL_TIM_COUNTERDIRECTION_DOWN) && (oldCounterTim <= 10) &&
-                  (counterTim >= 40))
+         else if ((LL_TIM_GetDirection(TIM1) == LL_TIM_COUNTERDIRECTION_DOWN)
+                  && (oldCounterTim <= 10) && (counterTim >= 40))
          {
             LL_TIM_SetCounter(TIM1, 0);
             counterTim = 0;
          }
          oldCounterTim = counterTim;
-         temperature.target = (int32_t)10 * counterTim;
+         temperature.target = (int32_t) 10 * counterTim;
          displayTargetTemperature(temperature.target);
       }
 
@@ -301,7 +367,9 @@ void SystemClock_Config(void)
    LL_RCC_SetADCClockSource(LL_RCC_ADC_CLKSRC_PCLK2_DIV_6);
 }
 
-void Error_Handler(void) {}
+void Error_Handler(void)
+{
+}
 
 #ifdef USE_FULL_ASSERT
 /**

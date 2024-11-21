@@ -6,8 +6,8 @@
  */
 
 #include <HD44780.h>
+#include <delay.h>
 #include <gpio.h>
-#include <myDelay.h>
 
 static inline void lcd_sendHalf(uint8_t data);
 static inline void lcd_write_byte(uint8_t data);
@@ -19,9 +19,9 @@ static inline void lcd_char_XY(uint8_t x, uint8_t y, uint8_t znak);
 
 static inline void lcd_sendHalf(uint8_t data)
 {
-   LL_GPIO_SetOutputPin(LCD_E_GPIO_Port, LCD_E_Pin);   // E High
+   LL_GPIO_SetOutputPin(LCD_E_GPIO_Port, LCD_E_Pin); // E High
 
-   if ((data & 0x01) == 0x01)   // D4
+   if ((data & 0x01) == 0x01) // D4
    {
       LL_GPIO_SetOutputPin(D4_GPIO_Port, D4_Pin);
    }
@@ -30,7 +30,7 @@ static inline void lcd_sendHalf(uint8_t data)
       LL_GPIO_ResetOutputPin(D4_GPIO_Port, D4_Pin);
    }
 
-   if ((data & 0x02) == 0x02)   // D5
+   if ((data & 0x02) == 0x02) // D5
    {
       LL_GPIO_SetOutputPin(D5_GPIO_Port, D5_Pin);
    }
@@ -39,7 +39,7 @@ static inline void lcd_sendHalf(uint8_t data)
       LL_GPIO_ResetOutputPin(D5_GPIO_Port, D5_Pin);
    }
 
-   if ((data & 0x04) == 0x04)   // D6
+   if ((data & 0x04) == 0x04) // D6
    {
       LL_GPIO_SetOutputPin(D6_GPIO_Port, D6_Pin);
    }
@@ -48,7 +48,7 @@ static inline void lcd_sendHalf(uint8_t data)
       LL_GPIO_ResetOutputPin(D6_GPIO_Port, D6_Pin);
    }
 
-   if ((data & 0x08) == 0x08)   // D7
+   if ((data & 0x08) == 0x08) // D7
    {
       LL_GPIO_SetOutputPin(D7_GPIO_Port, D7_Pin);
    }
@@ -57,7 +57,7 @@ static inline void lcd_sendHalf(uint8_t data)
       LL_GPIO_ResetOutputPin(D7_GPIO_Port, D7_Pin);
    }
 
-   LL_GPIO_ResetOutputPin(LCD_E_GPIO_Port, LCD_E_Pin);   // E Low
+   LL_GPIO_ResetOutputPin(LCD_E_GPIO_Port, LCD_E_Pin); // E Low
 }
 
 static inline void lcd_write_byte(uint8_t data)
@@ -65,18 +65,18 @@ static inline void lcd_write_byte(uint8_t data)
    lcd_sendHalf(data >> 4);
    lcd_sendHalf(data);
 
-   Delay(1);
+   TS_Delay_ms(1);
 }
 
 static inline void lcd_write_cmd(uint8_t cmd)
 {
-   LL_GPIO_ResetOutputPin(LCD_RS_GPIO_Port, LCD_RS_Pin);   // RS
+   LL_GPIO_ResetOutputPin(LCD_RS_GPIO_Port, LCD_RS_Pin); // RS
    lcd_write_byte(cmd);
 }
 
 static inline void lcd_char(uint8_t data)
 {
-   LL_GPIO_SetOutputPin(LCD_RS_GPIO_Port, LCD_RS_Pin);   // RS
+   LL_GPIO_SetOutputPin(LCD_RS_GPIO_Port, LCD_RS_Pin); // RS
    lcd_write_byte(data);
 }
 
@@ -84,13 +84,13 @@ static inline void lcd_locate(uint8_t x, uint8_t y)
 {
    switch (y)
    {
-      case 0:
-         lcd_write_cmd(LCDC_SET_DDRAM | (LCD_LINE1 + x));
-         break;
+   case 0:
+      lcd_write_cmd(LCDC_SET_DDRAM | (LCD_LINE1 + x));
+      break;
 
-      case 1:
-         lcd_write_cmd(LCDC_SET_DDRAM | (LCD_LINE2 + x));
-         break;
+   case 1:
+      lcd_write_cmd(LCDC_SET_DDRAM | (LCD_LINE2 + x));
+      break;
    }
 }
 
@@ -110,17 +110,17 @@ static inline void lcd_char_XY(uint8_t x, uint8_t y, uint8_t character)
 
 void LCD_Init(void)
 {
-   LL_GPIO_ResetOutputPin(LCD_E_GPIO_Port, LCD_E_Pin);     // E
-   LL_GPIO_ResetOutputPin(LCD_RS_GPIO_Port, LCD_RS_Pin);   // RS
+   LL_GPIO_ResetOutputPin(LCD_E_GPIO_Port, LCD_E_Pin);   // E
+   LL_GPIO_ResetOutputPin(LCD_RS_GPIO_Port, LCD_RS_Pin); // RS
 
    lcd_sendHalf(0x03);
-   Delay(5);
+   TS_Delay_ms(5);
    lcd_sendHalf(0x03);
-   Delay(1);
+   TS_Delay_ms(1);
    lcd_sendHalf(0x03);
-   Delay(1);
+   TS_Delay_ms(1);
    lcd_sendHalf(0x02);
-   Delay(1);
+   TS_Delay_ms(1);
 
    // Juz jestesmy w trybie 4-bitowym. Tutaj dokonujemy ustawien wyswietlacza:
    lcd_write_cmd(LCDC_ENTRY_MODE | LCD_EM_LEFT | LCD_EM_SHIFT_CURSOR);
@@ -130,7 +130,7 @@ void LCD_Init(void)
    lcd_write_cmd(LCD_SHIFT | LCDC_SHIFT_CURSOR | LCDC_SHIFT_LEFT);
 
    lcd_write_cmd(LCD_CLEAR);
-   Delay(1);
+   TS_Delay_ms(1);
 
    // CG00
    lcd_write_cmd(LCDC_SET_CGRAM_ADDR | 0x00);
